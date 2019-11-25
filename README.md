@@ -27,7 +27,7 @@
 [![Bountysource](https://api.bountysource.com/badge/tracker?tracker_id=23217)](https://www.bountysource.com/trackers/23217-fabric-js?utm_source=23217&utm_medium=shield&utm_campaign=TRACKER_BADGE)
 [![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=kangax&url=http://github.com/kangax/fabric.js&title=Fabric.js&language=&tags=github&category=software)
 
-**Fabric.js** is a framework that makes it easy to work with HTML5 canvas element. It is an **interactive object model** on top of canvas element. It is also an **SVG-to-canvas parser**.
+**Fabric.js** is a testttttt framework that makes it easy to work with HTML5 canvas element. It is an **interactive object model** on top of canvas element. It is also an **SVG-to-canvas parser**.
 
 <a href="http://fabricjs.com/kitchensink" target="_blank"><img src="https://github.com/kangax/fabric.js/raw/master/lib/screenshot.png" style="width:300px;box-shadow:rgba(0,0,0,0.3) 0 0 5px"></a>
 
@@ -35,8 +35,7 @@ Using Fabric.js, you can create and populate objects on canvas; objects like sim
 
 ### Non-Technical Introduction to Fabric
 
-Fabric.js allows you to easily create simple shapes like rectangles, circles, triangles and other polygons or more complex shapes made up of many paths, onto the HTML `<canvas>` element on a webpage using JavaScript.  Fabric.js will then allow you to manipulate the size, position and rotation of these objects with a mouse.  It’s also possible to change some of the attributes of these objects such as their color, transparency, depth position on the webpage or selecting groups of these objects using the Fabric.js library. Fabric.js will also allow you to convert an SVG image into JavaScript data that can be used for putting it onto the `<canvas>` element.
-
+Fabric.js allows you to easily create simple shapes like rectangles, circles, triangles and other polygons or more complex shapes made up of many paths, onto the HTML `<canvas>` element on a webpage using JavaScript. Fabric.js will then allow you to manipulate the size, position and rotation of these objects with a mouse. It’s also possible to change some of the attributes of these objects such as their color, transparency, depth position on the webpage or selecting groups of these objects using the Fabric.js library. Fabric.js will also allow you to convert an SVG image into JavaScript data that can be used for putting it onto the `<canvas>` element.
 
 [Contributions](https://github.com/kangax/fabric.js/wiki/Love-Fabric%3F-Help-us-by...) are very much welcome!
 
@@ -78,9 +77,9 @@ To install Fabric.js using npm, you must first manually [install Cairo](http://c
 
 <h3 id="fabric-building">Building</h3>
 
-1. [Install Node.js](https://github.com/joyent/node/wiki/Installation)
+1.  [Install Node.js](https://github.com/joyent/node/wiki/Installation)
 
-2. Build distribution file  **[~77K minified, ~20K gzipped]**
+2.  Build distribution file **[~77K minified, ~20K gzipped]**
 
         $ node build.js
 
@@ -93,11 +92,11 @@ To install Fabric.js using npm, you must first manually [install Cairo](http://c
           $ node build.js modules=parser,text
           // etc.
 
-      By default (when none of the modules are specified) only basic functionality is included.
-      See the list of modules below for more information on each one of them.
-      Note that default distribution has support for **static canvases** only.
+    By default (when none of the modules are specified) only basic functionality is included.
+    See the list of modules below for more information on each one of them.
+    Note that default distribution has support for **static canvases** only.
 
-      To get minimal distribution with interactivity, make sure to include corresponding module:
+    To get minimal distribution with interactivity, make sure to include corresponding module:
 
           $ node build.js modules=interaction
 
@@ -109,7 +108,7 @@ To install Fabric.js using npm, you must first manually [install Cairo](http://c
 
           $ node build.js modules=ALL exclude=gestures,image_filters
 
-3. Create a minified distribution file
+3.  Create a minified distribution file
 
         # Using YUICompressor (default option)
         $ node build.js modules=... minifier=yui
@@ -117,11 +116,11 @@ To install Fabric.js using npm, you must first manually [install Cairo](http://c
         # or Google Closure Compiler
         $ node build.js modules=... minifier=closure
 
-4. Enable AMD support via require.js (requires uglify)
+4.  Enable AMD support via require.js (requires uglify)
 
         $ node build.js requirejs modules=...
 
-5. Create source map file for better productive debugging (requires uglify or google closure compiler).<br>More information about [source maps](http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/).
+5.  Create source map file for better productive debugging (requires uglify or google closure compiler).<br>More information about [source maps](http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/).
 
         $ node build.js sourcemap modules=...
 
@@ -129,21 +128,21 @@ To install Fabric.js using npm, you must first manually [install Cairo](http://c
 
         //# sourceMappingURL=fabric.min.js.map
 
-6. Ensure code guidelines are met (prerequisite: `npm -g install eslint`)
+6.  Ensure code guidelines are met (prerequisite: `npm -g install eslint`)
 
         $ npm run lint && npm run lint_tests
 
 <h3 id="fabric-building">Testing</h3>
 
-1. [Install Node.js](https://github.com/joyent/node/wiki/Installation)
+1.  [Install Node.js](https://github.com/joyent/node/wiki/Installation)
 
-2. [Install NPM, if necessary](https://github.com/npm/npm#super-easy-install)
+2.  [Install NPM, if necessary](https://github.com/npm/npm#super-easy-install)
 
-3. Install NPM packages
+3.  Install NPM packages
 
         $ npm install
 
-4. Run test suite
+4.  Run test suite
 
 Make sure testem is installed
 
@@ -188,7 +187,7 @@ These are the optional modules that could be specified for inclusion, when build
 
 Additional flags for build script are:
 
-- **requirejs** — Makes fabric requirejs AMD-compatible in `dist/fabric.js`. *Note:* an unminified, requirejs-compatible version is always created in `dist/fabric.require.js`
+- **requirejs** — Makes fabric requirejs AMD-compatible in `dist/fabric.js`. _Note:_ an unminified, requirejs-compatible version is always created in `dist/fabric.require.js`
 - **no-strict** — Strips "use strict" directives from source
 - **no-svg-export** — Removes svg exporting functionality
 - **sourcemap** - Generates a sourceMap file and adds the `sourceMappingURL` (only if uglifyjs is used) to `dist/fabric.min.js`
@@ -204,26 +203,25 @@ For example:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-</head>
-<body>
+  <head> </head>
+  <body>
     <canvas id="canvas" width="300" height="300"></canvas>
 
     <script src="lib/fabric.js"></script>
     <script>
-        var canvas = new fabric.Canvas('canvas');
+      var canvas = new fabric.Canvas('canvas');
 
-        var rect = new fabric.Rect({
-            top : 100,
-            left : 100,
-            width : 60,
-            height : 70,
-            fill : 'red'
-        });
+      var rect = new fabric.Rect({
+        top: 100,
+        left: 100,
+        width: 60,
+        height: 70,
+        fill: 'red'
+      });
 
-        canvas.add(rect);
+      canvas.add(rect);
     </script>
-</body>
+  </body>
 </html>
 ```
 
@@ -275,5 +273,4 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/kangax/fabric.js/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/kangax/fabric.js/trend.png)](https://bitdeli.com/free 'Bitdeli Badge')
