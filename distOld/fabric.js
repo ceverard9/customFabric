@@ -1,7 +1,7 @@
 /* build: `node build.js modules=ALL exclude=gestures,accessors requirejs minifier=uglifyjs` */
 /*! Fabric.js Copyright 2008-2015, Printio (Juriy Zaytsev, Maxim Chernyak) */
-var selectPopup = true;
-var fabric = fabric || { version: '3.4.0' };
+
+var fabric = fabric || { version: '3.5.1' };
 if (typeof exports !== 'undefined') {
   exports.fabric = fabric;
 }
@@ -1310,7 +1310,7 @@ fabric.CommonMethods = {
      * @memberOf fabric.util
      * @param  {Object} options
      * @param  {Number} [options.angle] angle in degrees
-     * @return {Array[Number]} transform matrix
+     * @return {Number[]} transform matrix
      */
     calcRotateMatrix: function(options) {
       if (!options.angle) {
@@ -1337,7 +1337,7 @@ fabric.CommonMethods = {
      * @param  {Boolean} [options.flipY]
      * @param  {Number} [options.skewX]
      * @param  {Number} [options.skewX]
-     * @return {Array[Number]} transform matrix
+     * @return {Number[]} transform matrix
      */
     calcDimensionsMatrix: function(options) {
       var scaleX = typeof options.scaleX === 'undefined' ? 1 : options.scaleX,
@@ -1382,7 +1382,7 @@ fabric.CommonMethods = {
      * @param  {Number} [options.skewX]
      * @param  {Number} [options.translateX]
      * @param  {Number} [options.translateY]
-     * @return {Array[Number]} transform matrix
+     * @return {Number[]} transform matrix
      */
     composeMatrix: function(options) {
       var matrix = [1, 0, 0, 1, options.translateX || 0, options.translateY || 0],
@@ -1405,7 +1405,7 @@ fabric.CommonMethods = {
      * @param  {Number} scaleX
      * @param  {Number} scaleY
      * @param  {Number} skewX
-     * @return {Array[Number]} transform matrix
+     * @return {Number[]} transform matrix
      */
     customTransformMatrix: function(scaleX, scaleY, skewX) {
       return fabric.util.composeMatrix({ scaleX: scaleX, scaleY: scaleY, skewX: skewX });
@@ -4510,6 +4510,9 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
         objTransformInv,
         clipPath.calcTransformMatrix()
       );
+      if (clipPath.clipPath) {
+        this.resolveClipPath(clipPath);
+      }
       var options = fabric.util.qrDecompose(gTransform);
       clipPath.flipX = false;
       clipPath.flipY = false;
@@ -5788,7 +5791,7 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
      * Imported from svg gradients, is not applied with the current transform in the center.
      * Before this transform is applied, the origin point is at the top left corner of the object
      * plus the addition of offsetY and offsetX.
-     * @type Array[Number]
+     * @type Number[]
      * @default null
      */
     gradientTransform: null,
@@ -5798,14 +5801,15 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
      * If `pixels`, the number of coords are in the same unit of width / height.
      * If set as `percentage` the coords are still a number, but 1 means 100% of width
      * for the X and 100% of the height for the y. It can be bigger than 1 and negative.
-     * @type String pixels || percentage
+     * allowed values pixels or percentage.
+     * @type String
      * @default 'pixels'
      */
     gradientUnits: 'pixels',
 
     /**
-     * Gradient type
-     * @type String linear || radial
+     * Gradient type linear or radial
+     * @type String
      * @default 'pixels'
      */
     type: 'linear',
@@ -5817,7 +5821,7 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
      * @param {Object} [options.gradientUnits] gradient units
      * @param {Object} [options.offsetX] SVG import compatibility
      * @param {Object} [options.offsetY] SVG import compatibility
-     * @param {Array[Object]} options.colorStops contains the colorstops.
+     * @param {Object[]} options.colorStops contains the colorstops.
      * @param {Object} options.coords contains the coords of the gradient
      * @param {Number} [options.coords.x1] X coordiante of the first point for linear or of the focal point for radial
      * @param {Number} [options.coords.y1] Y coordiante of the first point for linear or of the focal point for radial
@@ -7538,9 +7542,6 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
       ctx.restore();
       if (!this.controlsAboveOverlay && this.interactive) {
         this.drawControls(ctx);
-        this.drawHoverControls(ctx);
-        this.drawPreviousControls(ctx);
-        this.drawSnappedControls(ctx);
       }
       if (this.clipTo) {
         ctx.restore();
@@ -7556,9 +7557,6 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
       this._renderOverlay(ctx);
       if (this.controlsAboveOverlay && this.interactive) {
         this.drawControls(ctx);
-        this.drawHoverControls(ctx);
-        this.drawPreviousControls(ctx);
-        this.drawSnappedControls(ctx);
       }
       this.fire('after:render', { ctx: ctx, });
     },
@@ -7615,12 +7613,9 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
           ? fill.toLive(ctx, this)
           : fill;
         if (needsVpt) {
-          ctx.transform(
-            v[0], v[1], v[2], v[3],
-            v[4] + (fill.offsetX || 0),
-            v[5] + (fill.offsetY || 0)
-          );
+          ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
         }
+        ctx.transform(1, 0, 0, 1, fill.offsetX || 0, fill.offsetY || 0);
         var m = fill.gradientTransform || fill.patternTransform;
         m && ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
         ctx.fill();
@@ -8892,7 +8887,7 @@ fabric.BaseBrush = fabric.util.createClass(/** @lends fabric.BaseBrush.prototype
       var path = this.createPath(pathData);
       this.canvas.clearContext(this.canvas.contextTop);
       this.canvas.add(path);
-      this.canvas.renderAll();
+      this.canvas.requestRenderAll();
       path.setCoords();
       this._resetShadow();
 
@@ -9464,7 +9459,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
      * @default
      */
     selection:              true,
-    
+
     /**
      * Indicates which key or keys enable multiple click selection
      * Pass value as a string or array of strings
@@ -10233,7 +10228,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
 
       transform.newScaleX = scaleX;
       transform.newScaleY = scaleY;
-      if (by === 'x' && target instanceof fabric.Textbox) {
+      if (fabric.Textbox && by === 'x' && target instanceof fabric.Textbox) {
         var w = target.width * (localMouse.x / _dim.x);
         if (w >= target.getMinWidth()) {
           scaled = w !== target.width;
@@ -10436,9 +10431,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
      * @private
      * @param {CanvasRenderingContext2D} ctx to draw the selection on
      */
-    
     _drawSelection: function (ctx) {
-      
       var groupSelector = this._groupSelector,
           left = groupSelector.left,
           top = groupSelector.top,
@@ -10464,7 +10457,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
 
       // selection border
       if (this.selectionDashArray.length > 1 && !supportLineDash) {
-        
 
         var px = groupSelector.ex + STROKE_OFFSET - ((left > 0) ? 0 : aleft),
             py = groupSelector.ey + STROKE_OFFSET - ((top > 0) ? 0 : atop);
@@ -10480,18 +10472,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
         ctx.stroke();
       }
       else {
-        
-        if (selectPopup) {
-       
-      Snackbar.show({
-        showAction: false,
-        text: 'To select and move your whole ramp, just right click!',
-        pos: 'bottom-center'
-      });
-      selectPopup = false;
-      } else {
-        selectPopup = false;
-      }
         fabric.Object.prototype._setLineDash.call(this, ctx, this.selectionDashArray);
         ctx.strokeRect(
           groupSelector.ex + STROKE_OFFSET - ((left > 0) ? 0 : aleft),
@@ -10789,15 +10769,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       return this._activeObject;
     },
 
-    getHoverObject: function () {
-      return this._hoverObject;
-    },
-    getPreviousObject: function () {
-      return this._previousObject;
-    },
-    getSnappedObject: function () {
-      return this._snappedObject;
-    },
     /**
      * Returns an array with the current selected objects
      * @return {fabric.Object} active object
@@ -10830,12 +10801,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       if (this._hoveredTarget === obj) {
         this._hoveredTarget = null;
       }
-      if (obj.systemPart) {
-        this._previousObject = null;
-      }
-      
       this.callSuper('_onObjectRemoved', obj);
-      // this._discardPreviousObject();
     },
 
     /**
@@ -10893,38 +10859,11 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
      * @chainable
      */
     setActiveObject: function (object, e) {
-      this._discardHoverObject(e);
       var currentActives = this.getActiveObjects();
       this._setActiveObject(object, e);
       this._fireSelectionEvents(currentActives, e);
       return this;
     },
-
-// set given hover object
-    setHoverObject: function (object, e) {
-      
-      var currentHover = this.getHoverObject();
-      this._setHoverObject(object, e);
-      
-      return this;
-    },
-
-// set last in sequence
-setPreviousObject: function (object, e) {
-  
-  var currentPrevious = this.getPreviousObject();
-  this._setPreviousObject(object, e);
-  
-  return this;
-},
-setSnappedObject: function (object, e) {
-  
-  var currentSnapped = this.getSnappedObject();
-  this._setSnappedObject(object, e);
-  
-  return this;
-},
-
 
     /**
      * @private
@@ -10945,58 +10884,6 @@ setSnappedObject: function (object, e) {
       this._activeObject = object;
       return true;
     },
-    _setHoverObject: function(object, e) {
-      if (this._hoverObject === object) {
-        return false;
-      }
-      if (!this._discardHoverObject(e, object)) {
-        return false;
-      }
-      if (object === this._activeObject) {
-        return false;
-      }
-      // if (object.onSelect({ e: e })) {
-      //   return false;
-      // }
-      this._hoverObject = object;
-      return true;
-    },
-
-
-    _setPreviousObject: function(object, e) {
-      // if (this._previousObject === object) {
-      //   return false;
-      // }
-      // if (!this._discardPreviousObject(e, object)) {
-      //   return false;
-      // }
-      // if (object === this._activeObject) {
-      //   return false;
-      // }
-      // if (object.onSelect({ e: e })) {
-      //   return false;
-      // }
-      this._previousObject = object;
-
-      return true;
-    },
-    _setSnappedObject: function(object, e) {
-      // if (this._previousObject === object) {
-      //   return false;
-      // }
-      // if (!this._discardPreviousObject(e, object)) {
-      //   return false;
-      // }
-      // if (object === this._activeObject) {
-      //   return false;
-      // }
-      // if (object.onSelect({ e: e })) {
-      //   return false;
-      // }
-      this._snappedObject = object;
-
-      return true;
-    },
 
     /**
      * @private
@@ -11009,33 +10896,6 @@ setSnappedObject: function (object, e) {
           return false;
         }
         this._activeObject = null;
-      }
-      return true;
-    },
-
-
-    _discardHoverObject: function(e) {
-      var obj = this._hoverObject;
-      if (obj) {
-        
-        this._hoverObject = null;
-      }
-      return true;
-    },
-
-    _discardPreviousObject: function(e) {
-      var obj = this._previousObject;
-      if (obj) {
-        
-        this._previousObject = null;
-      }
-      return true;
-    },
-    _discardSnappedObject: function(e) {
-      var obj = this._snappedObject;
-      if (obj) {
-        
-        this._snappedObject = null;
       }
       return true;
     },
@@ -11055,28 +10915,7 @@ setSnappedObject: function (object, e) {
         this.fire('before:selection:cleared', { target: activeObject, e: e });
       }
       this._discardActiveObject(e);
-      this._discardHoverObject(e);
       this._fireSelectionEvents(currentActives, e);
-      return this;
-    },
-
-    discardHoverObject: function (e) {
-      
-      
-      this._discardHoverObject(e);
-      return this;
-    },
-
-    discardPreviousObject: function (e) {
-      
-      
-      this._discardPreviousObject(e);
-      return this;
-    },
-    discardSnappedObject: function (e) {
-      
-      
-      this._discardSnappedObject(e);
       return this;
     },
 
@@ -11101,7 +10940,6 @@ setSnappedObject: function (object, e) {
       }
       delete this.wrapperEl;
       fabric.StaticCanvas.prototype.dispose.call(this);
-      
       return this;
     },
 
@@ -11127,36 +10965,6 @@ setSnappedObject: function (object, e) {
       if (activeObject) {
         activeObject._renderControls(ctx);
       }
-    },
-
-    drawHoverControls: function(ctx) {
-      var hoverObject = this._hoverObject;
-
-      if (hoverObject) {
-        hoverObject._renderControls(ctx, {hover: true});
-      }
-      
-      
-    },
-
-    drawPreviousControls: function(ctx) {
-      var previousObject = this._previousObject;
-
-      if (previousObject) {
-        previousObject._renderControls(ctx, {previous: true});
-      }
-      
-      
-    },
-
-    drawSnappedControls: function(ctx) {
-      var snappedObject = this._snappedObject;
-
-      if (snappedObject) {
-        snappedObject._renderControls(ctx, {snapped: true});
-      }
-      
-      
     },
 
     /**
@@ -11247,19 +11055,7 @@ setSnappedObject: function (object, e) {
         mb: 4, // s
         bl: 5, // sw
         ml: 6, // w
-        tl: 7, // nw
-        ct:8,
-        cr:9,
-        cb:10,
-        cl:11,
-        cbl:12,
-        cbr: 13,
-        crl: 14,
-        crr: 15,
-        ctl: 16,
-        ctr: 17,
-        cll: 18,
-        clr: 19,
+        tl: 7 // nw
       },
       addListener = fabric.util.addListener,
       removeListener = fabric.util.removeListener,
@@ -13065,7 +12861,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * @type String
      * @default
      */
-    borderColor:              '#2980b9',
+    borderColor:              'rgba(102,153,255,0.75)',
 
     /**
      * Array specifying dash pattern of an object's borders (hasBorder must be true)
@@ -14244,9 +14040,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
       else {
         alternative && alternative(ctx);
       }
-      if (this.strokeUniform) {
-        ctx.setLineDash(ctx.getLineDash().map(function(value) { return value * ctx.lineWidth; }));
-      }
     },
 
     /**
@@ -14273,30 +14066,11 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
         ctx.rotate(degreesToRadians(options.angle));
         drawBorders && this.drawBordersInGroup(ctx, options, styleOverride);
       }
-      
       else {
-        if (styleOverride.hover) {
-
-        } else if (styleOverride.previous) {} else if (styleOverride.snapped) {} else {
         ctx.rotate(degreesToRadians(this.angle));
         drawBorders && this.drawBorders(ctx, styleOverride);
-        }
       }
-      if (styleOverride.hover) {
-        drawControls && drawBorders && this.drawHoverControls(ctx, styleOverride);
-        // && this.drawBorders(ctx, {borderColor:'#e67e22',widther: 3, borderDashArray: [9, 9]});
-              } else if (styleOverride.previous) {
-                
-                drawControls && this.drawPreviousControls(ctx, styleOverride);
-              }
-              else if (styleOverride.snapped) {
-                
-                drawControls && this.drawSnappedControls(ctx, styleOverride);
-              }
-              else {
-                drawControls && this.drawControls(ctx, styleOverride);
-              }
-      
+      drawControls && this.drawControls(ctx, styleOverride);
       ctx.restore();
     },
 
@@ -14597,9 +14371,10 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
       options || (options = { });
 
       var utils = fabric.util, origParams = utils.saveObjectTransform(this),
+          originalGroup = this.group,
           originalShadow = this.shadow, abs = Math.abs,
           multiplier = (options.multiplier || 1) * (options.enableRetinaScaling ? fabric.devicePixelRatio : 1);
-
+      delete this.group;
       if (options.withoutTransform) {
         utils.resetObjectTransform(this);
       }
@@ -14621,6 +14396,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
         else {
           scaling = this.getObjectScaling();
         }
+        // consider non scaling shadow.
         shadowOffset.x = 2 * Math.round(abs(shadow.offsetX) + shadowBlur) * (abs(scaling.scaleX));
         shadowOffset.y = 2 * Math.round(abs(shadow.offsetY) + shadowBlur) * (abs(scaling.scaleY));
       }
@@ -14643,6 +14419,9 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
       var canvasEl = canvas.toCanvasElement(multiplier || 1, options);
       this.shadow = originalShadow;
       this.canvas = originalCanvas;
+      if (originalGroup) {
+        this.group = originalGroup;
+      }
       this.set(origParams).setCoords();
       // canvas.dispose will call image.dispose that will nullify the elements
       // since this canvas is a simple element for the process, we remove references
@@ -14785,6 +14564,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * @param {Function} [callback] Callback to invoke when image set as a pattern
      * @return {fabric.Object} thisArg
      * @chainable
+     * @deprecated since 3.5.0
      * @see {@link http://jsfiddle.net/fabricjs/QT3pa/|jsFiddle demo}
      * @example <caption>Set pattern</caption>
      * object.setPatternFill({
@@ -14805,6 +14585,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * @param {Number} [options.offsetY=0] Shadow vertical offset
      * @return {fabric.Object} thisArg
      * @chainable
+     * @deprecated since 3.5.0
      * @see {@link http://jsfiddle.net/fabricjs/7gvJG/|jsFiddle demo}
      * @example <caption>Set shadow with string notation</caption>
      * object.setShadow('2px 2px 10px rgba(0,0,0,0.2)');
@@ -14826,6 +14607,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * Sets "color" of an instance (alias of `set('fill', &hellip;)`)
      * @param {String} color Color value
      * @return {fabric.Object} thisArg
+     * @deprecated since 3.5.0
      * @chainable
      */
     setColor: function(color) {
@@ -15642,7 +15424,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * @chainable
      */
     calcCoords: function(absolute) {
-        
       var rotateMatrix = this._calcRotateMatrix(),
           translateMatrix = this._calcTranslateMatrix(),
           startMatrix = multiplyMatrices(translateMatrix, rotateMatrix),
@@ -15654,16 +15435,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
           tr = transformPoint({ x: w, y: -h }, finalMatrix),
           bl = transformPoint({ x: -w, y: h }, finalMatrix),
           br = transformPoint({ x: w, y: h }, finalMatrix);
-
-          ctl = transformPoint({ x: -w, y: -h }, finalMatrix),
-          ctr = transformPoint({ x: w, y: -h }, finalMatrix),
-          cbl = transformPoint({ x: -w, y: h }, finalMatrix),
-          cbr = transformPoint({ x: w, y: h }, finalMatrix);
-
-          cll = transformPoint({ x: -w, y: -h }, finalMatrix),
-          crr = transformPoint({ x: w, y: -h }, finalMatrix),
-          clr = transformPoint({ x: -w, y: h }, finalMatrix),
-          crl = transformPoint({ x: w, y: h }, finalMatrix);
       if (!absolute) {
         var padding = this.padding, angle = degreesToRadians(this.angle),
             cos = fabric.util.cos(angle), sin = fabric.util.sin(angle),
@@ -15678,47 +15449,12 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
           bl.y += cosPMinusSinP;
           br.x += cosPMinusSinP;
           br.y += cosPSinP;
-
-          ctl.x -= cosPMinusSinP;
-          ctl.y -= cosPSinP;
-          ctr.x += cosPSinP;
-          ctr.y -= cosPMinusSinP;
-          cbl.x -= cosPSinP;
-          cbl.y += cosPMinusSinP;
-          cbr.x += cosPMinusSinP;
-          cbr.y += cosPSinP;
-
-          cll.x -= cosPMinusSinP;
-          cll.y -= cosPSinP;
-          crr.x += cosPSinP;
-          crr.y -= cosPMinusSinP;
-          clr.x -= cosPSinP;
-          clr.y += cosPMinusSinP;
-          crl.x += cosPMinusSinP;
-          crl.y += cosPSinP;
         }
-        if (this.connection === '45'){
-var ml  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
-            mt  = new fabric.Point((tr.x + tl.x) / 2, (tr.y + tl.y) / 2),
-            mr  = new fabric.Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
-            mb  = new fabric.Point((br.x + bl.x) / 2, (br.y + bl.y) / 2),
-            cl  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
-            ct  = new fabric.Point((tr.x + tl.x), (tr.y + tl.y)),
-            cr  = new fabric.Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
-            cb  = new fabric.Point((br.x + bl.x), (br.y + bl.y)),
-            mtr = new fabric.Point(mt.x + sin * this.rotatingPointOffset, mt.y - cos * this.rotatingPointOffset);
-        } else {
         var ml  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
             mt  = new fabric.Point((tr.x + tl.x) / 2, (tr.y + tl.y) / 2),
             mr  = new fabric.Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
             mb  = new fabric.Point((br.x + bl.x) / 2, (br.y + bl.y) / 2),
-            cl  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
-            ct  = new fabric.Point((tr.x + tl.x) / 2, (tr.y + tl.y) / 2),
-            cr  = new fabric.Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
-            cb  = new fabric.Point((br.x + bl.x) / 2, (br.y + bl.y) / 2),
-            
             mtr = new fabric.Point(mt.x + sin * this.rotatingPointOffset, mt.y - cos * this.rotatingPointOffset);
-        }
       }
 
       // if (!absolute) {
@@ -15740,21 +15476,14 @@ var ml  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
 
       var coords = {
         // corners
-        tl: tl, tr: tr, br: br, bl: bl,ctr: ctr, ctl: ctl, cll: cll, clr: clr, cbl: cbl, cbr: cbr, crl: crl, crr: crr
+        tl: tl, tr: tr, br: br, bl: bl,
       };
       if (!absolute) {
-          
         // middle
         coords.ml = ml;
         coords.mt = mt;
         coords.mr = mr;
         coords.mb = mb;
-
-        coords.cl = cl;
-        coords.ct = ct;
-        coords.cr = cr;
-        coords.cb = cb;
-        
         // rotating point
         coords.mtr = mtr;
       }
@@ -16589,7 +16318,7 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
       ctx.save();
       ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
       this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray, null);
-      ctx.lineWidth = styleOverride.widther || 2;
+
       ctx.strokeRect(
         -width / 2,
         -height / 2,
@@ -16659,7 +16388,6 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
      * @chainable
      */
     drawControls: function(ctx, styleOverride) {
-      
       styleOverride = styleOverride || {};
       var wh = this._calculateCurrentDimensions(),
           width = wh.x,
@@ -16685,24 +16413,8 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
         left,
         top, styleOverride);
 
-        this._drawControl('ctl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawControl('cll', ctx, methodName,
-        left,
-        top, styleOverride);
-
       // top-right
       this._drawControl('tr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-        
-        this._drawControl('ctr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-        this._drawControl('crr', ctx, methodName,
         left + width,
         top, styleOverride);
 
@@ -16711,112 +16423,32 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
         left,
         top + height, styleOverride);
 
-        this._drawControl('cbl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawControl('clr', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
       // bottom-right
       this._drawControl('br', ctx, methodName,
         left + width,
         top + height, styleOverride);
 
-        this._drawControl('cbr', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawControl('crl', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
       if (!this.get('lockUniScaling')) {
-if (this.connection === '45') {
-    
-     // middle-top
-     this._drawControl('mt', ctx, methodName,
-     left + width / 2,
-     top, styleOverride);
-     // connect -top
-   this._drawControl('ct', ctx, methodName,
-   left + width,
-   top, styleOverride);
 
-
-   // middle-bottom
-   this._drawControl('mb', ctx, methodName,
-     left + width / 2,
-     top + height, styleOverride);
-
-     // connect-bottom
-   this._drawControl('cb', ctx, methodName,
-   left + width,
-   top + height, styleOverride);
-
-   // middle-right
-   this._drawControl('mr', ctx, methodName,
-     left + width,
-     top + height / 2, styleOverride);
-
-   // connect-right
-   this._drawControl('cr', ctx, methodName,
-   left + width,
-   top + height / 2, styleOverride);
-
-   // middle-left
-   this._drawControl('ml', ctx, methodName,
-     left,
-     top + height / 2, styleOverride);
-
-     // connect-left
-   this._drawControl('cl', ctx, methodName,
-   left,
-   top + height / 2, styleOverride);
-} else {
         // middle-top
         this._drawControl('mt', ctx, methodName,
           left + width / 2,
           top, styleOverride);
-          // connect -top
-        this._drawControl('ct', ctx, methodName,
-        left + width / 2,
-        top, styleOverride);
-
-       
 
         // middle-bottom
         this._drawControl('mb', ctx, methodName,
           left + width / 2,
           top + height, styleOverride);
 
-          // connect-bottom
-        this._drawControl('cb', ctx, methodName,
-        left + width / 2,
-        top + height, styleOverride);
-         
-
         // middle-right
         this._drawControl('mr', ctx, methodName,
           left + width,
           top + height / 2, styleOverride);
 
-        // connect-right
-        this._drawControl('cr', ctx, methodName,
-        left + width,
-        top + height / 2, styleOverride);
-
         // middle-left
         this._drawControl('ml', ctx, methodName,
           left,
           top + height / 2, styleOverride);
-
-          // connect-left
-        this._drawControl('cl', ctx, methodName,
-        left,
-        top + height / 2, styleOverride);
-}
       }
 
       // middle-top-rotate
@@ -16840,38 +16472,6 @@ if (this.connection === '45') {
         return;
       }
       var size = this.cornerSize, stroke = !this.transparentCorners && this.cornerStrokeColor;
-      if (control === 'ct' || control === 'cr' || control === 'cb' || control === 'cl') {
-        
-        
-            ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#009c95';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-           
-        
-      } else if (control === 'mtr') {
-        // this.transparentCorners || ctx.fillRect(left, top, size, size);
-        // ctx[methodName + 'Rect'](left, top, size, size);
-        // if (stroke) {
-        //   ctx.strokeRect(left, top, size, size);
-        // }
-        ctx.fillStyle = '#009c95';
-ctx.fillRect(left, top, size, size);
-      } else if (control === 'cbl' || control === 'cbr' || control === 'crl' || control === 'crr' || control === 'ctr' || control === 'ctl' || control === 'cll' || control === 'clr') {
-        ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#2185d0';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-      } else {
-      
       switch (styleOverride.cornerStyle || this.cornerStyle) {
         case 'circle':
           ctx.beginPath();
@@ -16888,709 +16488,6 @@ ctx.fillRect(left, top, size, size);
             ctx.strokeRect(left, top, size, size);
           }
       }
-    }
-    },
-
-
-
-    drawHoverControls: function(ctx, styleOverride) {
-      
-      styleOverride = styleOverride || {};
-      var wh = this._calculateCurrentDimensions(),
-          width = wh.x,
-          height = wh.y,
-          scaleOffset = styleOverride.cornerSize || this.cornerSize,
-          left = -(width + scaleOffset) / 2,
-          top = -(height + scaleOffset) / 2,
-          transparentCorners = typeof styleOverride.transparentCorners !== 'undefined' ?
-            styleOverride.transparentCorners : this.transparentCorners,
-          hasRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
-            styleOverride.hasRotatingPoint : this.hasRotatingPoint,
-          methodName = transparentCorners ? 'stroke' : 'fill';
-
-      ctx.save();
-      ctx.strokeStyle = ctx.fillStyle = styleOverride.cornerColor || this.cornerColor;
-      if (!this.transparentCorners) {
-        ctx.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
-      }
-      this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray, null);
-
-      // top-left
-      this._drawHoverControl('tl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawHoverControl('ctl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawHoverControl('cll', ctx, methodName,
-        left,
-        top, styleOverride);
-
-      // top-right
-      this._drawHoverControl('tr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-        
-        this._drawHoverControl('ctr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-        this._drawHoverControl('crr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-      // bottom-left
-      this._drawHoverControl('bl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawHoverControl('cbl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawHoverControl('clr', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-      // bottom-right
-      this._drawHoverControl('br', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawHoverControl('cbr', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawHoverControl('crl', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-      if (!this.get('lockUniScaling')) {
-if (this.connection === '45') {
-    
-     // middle-top
-     this._drawHoverControl('mt', ctx, methodName,
-     left + width / 2,
-     top, styleOverride);
-     // connect -top
-   this._drawHoverControl('ct', ctx, methodName,
-   left + width,
-   top, styleOverride);
-
-
-   // middle-bottom
-   this._drawHoverControl('mb', ctx, methodName,
-     left + width / 2,
-     top + height, styleOverride);
-
-     // connect-bottom
-   this._drawHoverControl('cb', ctx, methodName,
-   left + width,
-   top + height, styleOverride);
-
-   // middle-right
-   this._drawHoverControl('mr', ctx, methodName,
-     left + width,
-     top + height / 2, styleOverride);
-
-   // connect-right
-   this._drawHoverControl('cr', ctx, methodName,
-   left + width,
-   top + height / 2, styleOverride);
-
-   // middle-left
-   this._drawHoverControl('ml', ctx, methodName,
-     left,
-     top + height / 2, styleOverride);
-
-     // connect-left
-   this._drawHoverControl('cl', ctx, methodName,
-   left,
-   top + height / 2, styleOverride);
-} else {
-        // middle-top
-        this._drawHoverControl('mt', ctx, methodName,
-          left + width / 2,
-          top, styleOverride);
-          // connect -top
-        this._drawHoverControl('ct', ctx, methodName,
-        left + width / 2,
-        top, styleOverride);
-
-       
-
-        // middle-bottom
-        this._drawHoverControl('mb', ctx, methodName,
-          left + width / 2,
-          top + height, styleOverride);
-
-          // connect-bottom
-        this._drawHoverControl('cb', ctx, methodName,
-        left + width / 2,
-        top + height, styleOverride);
-         
-
-        // middle-right
-        this._drawHoverControl('mr', ctx, methodName,
-          left + width,
-          top + height / 2, styleOverride);
-
-        // connect-right
-        this._drawHoverControl('cr', ctx, methodName,
-        left + width,
-        top + height / 2, styleOverride);
-
-        // middle-left
-        this._drawHoverControl('ml', ctx, methodName,
-          left,
-          top + height / 2, styleOverride);
-
-          // connect-left
-        this._drawHoverControl('cl', ctx, methodName,
-        left,
-        top + height / 2, styleOverride);
-}
-      }
-
-      // middle-top-rotate
-      // if (hasRotatingPoint) {
-      //   this._drawControl('mtr', ctx, methodName,
-      //     left + width / 2,
-      //     top - this.rotatingPointOffset, styleOverride);
-      // }
-
-      ctx.restore();
-
-      return this;
-    },
-
-    /**
-     * @private
-     */
-    _drawHoverControl: function(control, ctx, methodName, left, top, styleOverride) {
-      styleOverride = styleOverride || {};
-      if (!this.isControlVisible(control)) {
-        return;
-      }
-      var size = this.cornerSize, stroke = !this.transparentCorners && this.cornerStrokeColor;
-      if (control === 'ct' || control === 'cr' || control === 'cb' || control === 'cl') {
-        
-        
-            ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#e67e22';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-           
-        
-      } else if (control === 'mtr') {
-        // this.transparentCorners || ctx.fillRect(left, top, size, size);
-        // ctx[methodName + 'Rect'](left, top, size, size);
-        // if (stroke) {
-        //   ctx.strokeRect(left, top, size, size);
-        // }
-        // ctx.fillStyle = '#e67e22';
-// ctx.fillRect(left, top, size, size);
-      } else if (control === 'cbl' || control === 'cbr' || control === 'crl' || control === 'crr' || control === 'ctr' || control === 'ctl' || control === 'cll' || control === 'clr') {
-        ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#e67e22';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-      } else {
-      
-      switch (styleOverride.cornerStyle || this.cornerStyle) {
-        case 'circle':
-          ctx.beginPath();
-          ctx.arc(left + size / 2, top + size / 2, size / 2, 0, 2 * Math.PI, false);
-          ctx[methodName]();
-          if (stroke) {
-            ctx.stroke();
-          }
-          break;
-        default:
-          this.transparentCorners || ctx.clearRect(left, top, size, size);
-          ctx[methodName + 'Rect'](left, top, size, size);
-          if (stroke) {
-            ctx.strokeRect(left, top, size, size);
-          }
-      }
-    }
-    },
-
-
-    drawPreviousControls: function(ctx, styleOverride) {
-      
-      styleOverride = styleOverride || {};
-      var wh = this._calculateCurrentDimensions(),
-          width = wh.x,
-          height = wh.y,
-          scaleOffset = styleOverride.cornerSize || this.cornerSize,
-          left = -(width + scaleOffset) / 2,
-          top = -(height + scaleOffset) / 2,
-          transparentCorners = typeof styleOverride.transparentCorners !== 'undefined' ?
-            styleOverride.transparentCorners : this.transparentCorners,
-          hasRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
-            styleOverride.hasRotatingPoint : this.hasRotatingPoint,
-          methodName = transparentCorners ? 'stroke' : 'fill';
-
-      ctx.save();
-      ctx.strokeStyle = ctx.fillStyle = styleOverride.cornerColor || this.cornerColor;
-      if (!this.transparentCorners) {
-        ctx.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
-      }
-      this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray, null);
-
-      // top-left
-      this._drawPreviousControl('tl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawPreviousControl('ctl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawPreviousControl('cll', ctx, methodName,
-        left,
-        top, styleOverride);
-
-      // top-right
-      this._drawPreviousControl('tr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-        
-        this._drawPreviousControl('ctr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-        this._drawPreviousControl('crr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-      // bottom-left
-      this._drawPreviousControl('bl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawPreviousControl('cbl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawPreviousControl('clr', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-      // bottom-right
-      this._drawPreviousControl('br', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawPreviousControl('cbr', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawPreviousControl('crl', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-      if (!this.get('lockUniScaling')) {
-if (this.connection === '45') {
-    
-     // middle-top
-     this._drawPreviousControl('mt', ctx, methodName,
-     left + width / 2,
-     top, styleOverride);
-     // connect -top
-   this._drawPreviousControl('ct', ctx, methodName,
-   left + width,
-   top, styleOverride);
-
-
-   // middle-bottom
-   this._drawPreviousControl('mb', ctx, methodName,
-     left + width / 2,
-     top + height, styleOverride);
-
-     // connect-bottom
-   this._drawPreviousControl('cb', ctx, methodName,
-   left + width,
-   top + height, styleOverride);
-
-   // middle-right
-   this._drawPreviousControl('mr', ctx, methodName,
-     left + width,
-     top + height / 2, styleOverride);
-
-   // connect-right
-   this._drawPreviousControl('cr', ctx, methodName,
-   left + width,
-   top + height / 2, styleOverride);
-
-   // middle-left
-   this._drawPreviousControl('ml', ctx, methodName,
-     left,
-     top + height / 2, styleOverride);
-
-     // connect-left
-   this._drawPreviousControl('cl', ctx, methodName,
-   left,
-   top + height / 2, styleOverride);
-} else {
-        // middle-top
-        this._drawPreviousControl('mt', ctx, methodName,
-          left + width / 2,
-          top, styleOverride);
-          // connect -top
-        this._drawPreviousControl('ct', ctx, methodName,
-        left + width / 2,
-        top, styleOverride);
-
-       
-
-        // middle-bottom
-        this._drawPreviousControl('mb', ctx, methodName,
-          left + width / 2,
-          top + height, styleOverride);
-
-          // connect-bottom
-        this._drawPreviousControl('cb', ctx, methodName,
-        left + width / 2,
-        top + height, styleOverride);
-         
-
-        // middle-right
-        this._drawPreviousControl('mr', ctx, methodName,
-          left + width,
-          top + height / 2, styleOverride);
-
-        // connect-right
-        this._drawPreviousControl('cr', ctx, methodName,
-        left + width,
-        top + height / 2, styleOverride);
-
-        // middle-left
-        this._drawPreviousControl('ml', ctx, methodName,
-          left,
-          top + height / 2, styleOverride);
-
-          // connect-left
-        this._drawPreviousControl('cl', ctx, methodName,
-        left,
-        top + height / 2, styleOverride);
-}
-      }
-
-      // middle-top-rotate
-      // if (hasRotatingPoint) {
-      //   this._drawPreviousControl('mtr', ctx, methodName,
-      //     left + width / 2,
-      //     top - this.rotatingPointOffset, styleOverride);
-      // }
-
-      ctx.restore();
-
-      return this;
-    },
-
-    /**
-     * @private
-     */
-    _drawPreviousControl: function(control, ctx, methodName, left, top, styleOverride) {
-      styleOverride = styleOverride || {};
-      if (!this.isControlVisible(control)) {
-        return;
-      }
-      var size = this.cornerSize, stroke = !this.transparentCorners && this.cornerStrokeColor;
-      if (control === 'ct' || control === 'cr' || control === 'cb' || control === 'cl') {
-        
-        
-            ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-           
-        
-      } else if (control === 'mtr') {
-        // this.transparentCorners || ctx.fillRect(left, top, size, size);
-        // ctx[methodName + 'Rect'](left, top, size, size);
-        // if (stroke) {
-        //   ctx.strokeRect(left, top, size, size);
-        // }
-        // ctx.fillStyle = '#e67e22';
-// ctx.fillRect(left, top, size, size);
-      } else if (control === 'cbl' || control === 'cbr' || control === 'crl' || control === 'crr' || control === 'ctr' || control === 'ctl' || control === 'cll' || control === 'clr') {
-        ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-      } else {
-      
-      switch (styleOverride.cornerStyle || this.cornerStyle) {
-        case 'circle':
-          ctx.beginPath();
-          ctx.arc(left + size / 2, top + size / 2, size / 2, 0, 2 * Math.PI, false);
-          ctx[methodName]();
-          if (stroke) {
-            ctx.stroke();
-          }
-          break;
-        default:
-          this.transparentCorners || ctx.clearRect(left, top, size, size);
-          ctx[methodName + 'Rect'](left, top, size, size);
-          if (stroke) {
-            ctx.strokeRect(left, top, size, size);
-          }
-      }
-    }
-    },
-
-    drawSnappedControls: function(ctx, styleOverride) {
-      
-      styleOverride = styleOverride || {};
-      var wh = this._calculateCurrentDimensions(),
-          width = wh.x,
-          height = wh.y,
-          scaleOffset = styleOverride.cornerSize || this.cornerSize,
-          left = -(width + scaleOffset) / 2,
-          top = -(height + scaleOffset) / 2,
-          transparentCorners = typeof styleOverride.transparentCorners !== 'undefined' ?
-            styleOverride.transparentCorners : this.transparentCorners,
-          hasRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
-            styleOverride.hasRotatingPoint : this.hasRotatingPoint,
-          methodName = transparentCorners ? 'stroke' : 'fill';
-
-      ctx.save();
-      ctx.strokeStyle = ctx.fillStyle = styleOverride.cornerColor || this.cornerColor;
-      if (!this.transparentCorners) {
-        ctx.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
-      }
-      this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray, null);
-
-      // top-left
-      this._drawSnappedControls('tl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawSnappedControls('ctl', ctx, methodName,
-        left,
-        top, styleOverride);
-
-        this._drawSnappedControls('cll', ctx, methodName,
-        left,
-        top, styleOverride);
-
-      // top-right
-      this._drawSnappedControls('tr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-        
-        this._drawSnappedControls('ctr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-        this._drawSnappedControls('crr', ctx, methodName,
-        left + width,
-        top, styleOverride);
-
-      // bottom-left
-      this._drawSnappedControls('bl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawSnappedControls('cbl', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-        this._drawSnappedControls('clr', ctx, methodName,
-        left,
-        top + height, styleOverride);
-
-      // bottom-right
-      this._drawSnappedControls('br', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawSnappedControls('cbr', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-        this._drawSnappedControls('crl', ctx, methodName,
-        left + width,
-        top + height, styleOverride);
-
-      if (!this.get('lockUniScaling')) {
-if (this.connection === '45') {
-    
-     // middle-top
-     this._drawSnappedControls('mt', ctx, methodName,
-     left + width / 2,
-     top, styleOverride);
-     // connect -top
-   this._drawSnappedControls('ct', ctx, methodName,
-   left + width,
-   top, styleOverride);
-
-
-   // middle-bottom
-   this._drawSnappedControls('mb', ctx, methodName,
-     left + width / 2,
-     top + height, styleOverride);
-
-     // connect-bottom
-   this._drawSnappedControls('cb', ctx, methodName,
-   left + width,
-   top + height, styleOverride);
-
-   // middle-right
-   this._drawSnappedControls('mr', ctx, methodName,
-     left + width,
-     top + height / 2, styleOverride);
-
-   // connect-right
-   this._drawSnappedControls('cr', ctx, methodName,
-   left + width,
-   top + height / 2, styleOverride);
-
-   // middle-left
-   this._drawSnappedControls('ml', ctx, methodName,
-     left,
-     top + height / 2, styleOverride);
-
-     // connect-left
-   this._drawSnappedControls('cl', ctx, methodName,
-   left,
-   top + height / 2, styleOverride);
-} else {
-        // middle-top
-        this._drawSnappedControls('mt', ctx, methodName,
-          left + width / 2,
-          top, styleOverride);
-          // connect -top
-        this._drawSnappedControls('ct', ctx, methodName,
-        left + width / 2,
-        top, styleOverride);
-
-       
-
-        // middle-bottom
-        this._drawSnappedControls('mb', ctx, methodName,
-          left + width / 2,
-          top + height, styleOverride);
-
-          // connect-bottom
-        this._drawSnappedControls('cb', ctx, methodName,
-        left + width / 2,
-        top + height, styleOverride);
-         
-
-        // middle-right
-        this._drawSnappedControls('mr', ctx, methodName,
-          left + width,
-          top + height / 2, styleOverride);
-
-        // connect-right
-        this._drawSnappedControls('cr', ctx, methodName,
-        left + width,
-        top + height / 2, styleOverride);
-
-        // middle-left
-        this._drawSnappedControls('ml', ctx, methodName,
-          left,
-          top + height / 2, styleOverride);
-
-          // connect-left
-        this._drawSnappedControls('cl', ctx, methodName,
-        left,
-        top + height / 2, styleOverride);
-}
-      }
-
-      // middle-top-rotate
-      // if (hasRotatingPoint) {
-      //   this._drawSnappedControls('mtr', ctx, methodName,
-      //     left + width / 2,
-      //     top - this.rotatingPointOffset, styleOverride);
-      // }
-
-      ctx.restore();
-
-      return this;
-    },
-
-    /**
-     * @private
-     */
-    _drawSnappedControls: function(control, ctx, methodName, left, top, styleOverride) {
-      styleOverride = styleOverride || {};
-      if (!this.isControlVisible(control)) {
-        return;
-      }
-      var size = this.cornerSize, stroke = !this.transparentCorners && this.cornerStrokeColor;
-      if (control === 'ct' || control === 'cr' || control === 'cb' || control === 'cl') {
-        
-        
-            ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#2ecc71';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-           
-        
-      } else if (control === 'mtr') {
-        // this.transparentCorners || ctx.fillRect(left, top, size, size);
-        // ctx[methodName + 'Rect'](left, top, size, size);
-        // if (stroke) {
-        //   ctx.strokeRect(left, top, size, size);
-        // }
-        // ctx.fillStyle = '#e67e22';
-// ctx.fillRect(left, top, size, size);
-      } else if (control === 'cbl' || control === 'cbr' || control === 'crl' || control === 'crr' || control === 'ctr' || control === 'ctl' || control === 'cll' || control === 'clr') {
-        ctx.beginPath();
-            ctx.arc(left + size / 2, top + size / 2, 4, 0, 2 * Math.PI, false);
-            ctx.fillStyle = '#2ecc71';
-            ctx.fill();
-            ctx[methodName]();
-            if (stroke) {
-              ctx.stroke();
-            }
-      } else {
-      
-      switch (styleOverride.cornerStyle || this.cornerStyle) {
-        case 'circle':
-          ctx.beginPath();
-          ctx.arc(left + size / 2, top + size / 2, size / 2, 0, 2 * Math.PI, false);
-          ctx[methodName]();
-          if (stroke) {
-            ctx.stroke();
-          }
-          break;
-        default:
-          this.transparentCorners || ctx.clearRect(left, top, size, size);
-          ctx[methodName + 'Rect'](left, top, size, size);
-          if (stroke) {
-            ctx.strokeRect(left, top, size, size);
-          }
-      }
-    }
     },
 
     /**
@@ -17651,18 +16548,6 @@ if (this.connection === '45') {
           br: true,
           bl: true,
           ml: true,
-          ct:true,
-          cr:true,
-          cb:true,
-          cl:true,
-          ctl:true,
-          cll:true,
-          clr:true,
-          cbl:true,
-          cbr:true,
-          crl:true,
-          crr:true,
-          ctr:true,
           mt: true,
           mr: true,
           mb: true,
@@ -20801,7 +19686,19 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
    * @param {Function} [callback] Callback to invoke when an group instance is created
    */
   fabric.Group.fromObject = function(object, callback) {
-    fabric.util.enlivenObjects(object.objects, function(enlivenedObjects) {
+    var objects = object.objects,
+        options = fabric.util.object.clone(object, true);
+    delete options.objects;
+    if (typeof objects === 'string') {
+      // it has to be an url or something went wrong.
+      fabric.loadSVGFromURL(objects, function (elements) {
+        var group = fabric.util.groupSVGElements(elements, object, objects);
+        group.set(options);
+        callback && callback(group);
+      });
+      return;
+    }
+    fabric.util.enlivenObjects(objects, function(enlivenedObjects) {
       fabric.util.enlivenObjects([object.clipPath], function(enlivedClipPath) {
         var options = fabric.util.object.clone(object, true);
         options.clipPath = enlivedClipPath[0];
@@ -21506,7 +20403,8 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
     },
 
     /**
-     * @private, needed to check if image needs resize
+     * needed to check if image needs resize
+     * @private
      */
     _needsResize: function() {
       var scale = this.getTotalObjectScaling();
@@ -30341,9 +29239,11 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
      * @return {Boolean}
      */
     isEmptyStyles: function(lineIndex) {
-      var offset = 0, nextLineIndex = lineIndex + 1, nextOffset, obj, shouldLimit = false;
-      var map = this._styleMap[lineIndex];
-      var mapNextLine = this._styleMap[lineIndex + 1];
+      if (!this.styles) {
+        return true;
+      }
+      var offset = 0, nextLineIndex = lineIndex + 1, nextOffset, obj, shouldLimit = false,
+          map = this._styleMap[lineIndex], mapNextLine = this._styleMap[lineIndex + 1];
       if (map) {
         lineIndex = map.line;
         offset = map.offset;
@@ -30634,3 +29534,4 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
     return fabric.Object._fromObject('Textbox', object, callback, 'text');
   };
 })(typeof exports !== 'undefined' ? exports : this);
+
