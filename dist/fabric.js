@@ -10483,11 +10483,11 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
         
         if (selectPopup) {
        
-      Snackbar.show({
-        showAction: false,
-        text: 'To select and move your whole ramp, just right click!',
-        pos: 'bottom-center'
-      });
+      // Snackbar.show({
+      //   showAction: false,
+      //   text: 'To select and move your whole ramp, just right click!',
+      //   pos: 'bottom-center'
+      // });
       selectPopup = false;
       } else {
         selectPopup = false;
